@@ -1,6 +1,6 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
-import { makeApiRequest } from "./main";
+import { addBonuses, makeApiRequest } from "./main";
 import { DB_NAME, DB_PORT, NODE_MONGO_PORT } from "./env";
 import * as mongoose from "mongoose";
 
@@ -36,6 +36,12 @@ app.get("/nalog", (req: Request, res: Response) => {
 });
 app.post("/nalog", (req: Request, res: Response) => {
   makeApiRequest(req, res);
+});
+app.get("/addBonuses", (req: Request, res: Response) => {
+  addBonuses(req, res);
+});
+app.post("/addBonuses", (req: Request, res: Response) => {
+  addBonuses(req, res);
 });
 
 app.listen(port, () => {

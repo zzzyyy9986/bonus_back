@@ -3,7 +3,7 @@ import * as mongoose from "mongoose";
 
 export const userShema: Schema = new Schema(
   {
-    name: String,
+    fullName: String,
     balance: Number,
   },
   {
@@ -11,4 +11,4 @@ export const userShema: Schema = new Schema(
   },
 );
 
-export const User = model("Game", userShema);
+export const User = model("User", userShema);
