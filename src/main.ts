@@ -16,6 +16,7 @@ import {
   IHistoryItemFull,
 } from "./common/interfaces/IHistoryItem";
 import { getApiKey } from "./utils";
+import { Stream } from "stream";
 
 /**
  * Пока в системе один юзер
@@ -28,13 +29,17 @@ const userId = "6623c1b47a520a52efb56917";
  * @param req
  * @param res
  */
-export const makeApiRequest = async (req: Request, res: Response) => {
+export const qrScan = async (req: Request, res: Response) => {
   const fullCheckInfo = await getFullCheckInfoByUserData(
     req.body?.qrraw ??
       "t=20240131T2126&s=47718.00&fn=7284440500275777&i=4044&fp=1511848317&n=1",
   );
   const fullTaxInfo: TaxResponse = fullCheckInfo.data.data;
-  const partner = await Partner.findOne({ name: fullTaxInfo.json.user });
+  console.log(fullTaxInfo);
+  console.log("фнс!!!");
+  const partner = await Partner.findOne({ inn: fullTaxInfo.json.userInn });
+  // console.log(partner);
+  // console.log("важно!!!");
   const percent = partner.percent;
 
   const frontData: FrontTaxInfo = {
@@ -60,6 +65,7 @@ const getFullCheckInfoByUserData = async (requestData: string) => {
     //   "t=20240131T2126&s=47718.00&fn=7284440500275777&i=4044&fp=1511848317&n=1",
     qrraw: requestData,
   });
+  res.data.data.json.userInn = res.data.data.json.userInn.trim();
   return res;
 };
 /**
@@ -73,7 +79,7 @@ export const addBonuses = async (req: Request, res: Response) => {
     "t=20240131T2126&s=47718.00&fn=7284440500275777&i=4044&fp=1511848317&n=1";
   const fullCheckInfo = await getFullCheckInfoByUserData(qrStr);
   const fullTaxInfo: TaxResponse = fullCheckInfo.data.data;
-  const partner = await Partner.findOne({ name: fullTaxInfo.json.user });
+  const partner = await Partner.findOne({ inn: fullTaxInfo.json.userInn });
 
   const operation = await History.findOne({
     qrStr: qrStr,
@@ -82,7 +88,7 @@ export const addBonuses = async (req: Request, res: Response) => {
   /**
    * проверяем, есть ли уже такая операция в базе
    */
-  if (!operation || 2 > 1) {
+  if (!operation) {
     const currentUser = await User.findOne({ _id: new ObjectId(userId) });
     await History.insertMany({
       sum: fullTaxInfo.json.totalSum / 100,
@@ -152,4 +158,5 @@ export const addPartner = async (req: Request, res: Response) => {
       upsert: true,
     },
   );
+  return res.status(201).json({ status: ResponseStatuses.ok });
 };

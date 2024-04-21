@@ -1,12 +1,10 @@
 import express, { Express, Request, Response } from "express";
-import {
-  addBonuses,
-  addPartner,
-  getHistoryItems,
-  makeApiRequest,
-} from "./main";
+import dotenv from "dotenv";
+import { addBonuses, addPartner, getHistoryItems, qrScan } from "./main";
 import { DB_NAME, DB_PORT, NODE_MONGO_PORT } from "./env";
 import * as mongoose from "mongoose";
+
+dotenv.config();
 
 const app: Express = express();
 const port = 8080;
@@ -39,10 +37,10 @@ app.get("/", (req: express.Request, res: express.Response) => {
 });
 app.get("/nalog", (req: Request, res: Response) => {
   console.log("ff");
-  makeApiRequest(req, res);
+  qrScan(req, res);
 });
 app.post("/nalog", (req: Request, res: Response) => {
-  makeApiRequest(req, res);
+  qrScan(req, res);
 });
 app.get("/addBonuses", (req: Request, res: Response) => {
   addBonuses(req, res);
