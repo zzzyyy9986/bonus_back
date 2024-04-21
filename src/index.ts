@@ -1,5 +1,4 @@
 import express, { Express, Request, Response } from "express";
-import dotenv from "dotenv";
 import {
   addBonuses,
   addPartner,
@@ -8,8 +7,6 @@ import {
 } from "./main";
 import { DB_NAME, DB_PORT, NODE_MONGO_PORT } from "./env";
 import * as mongoose from "mongoose";
-
-dotenv.config();
 
 const app: Express = express();
 const port = 8080;
