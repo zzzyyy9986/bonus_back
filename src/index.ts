@@ -1,6 +1,11 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
-import { addBonuses, makeApiRequest } from "./main";
+import {
+  addBonuses,
+  addPartner,
+  getHistoryItems,
+  makeApiRequest,
+} from "./main";
 import { DB_NAME, DB_PORT, NODE_MONGO_PORT } from "./env";
 import * as mongoose from "mongoose";
 
@@ -18,6 +23,7 @@ corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 const dbUrl = `mongodb://localhost:${DB_PORT}/${DB_NAME}`;
+const pathToFront = __dirname + "/build/";
 
 mongoose
   .connect(dbUrl)
@@ -27,8 +33,12 @@ mongoose
   })
   .catch((err) => console.log(err));
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server3");
+app.get("/", (req: express.Request, res: express.Response) => {
+  // console.log(req.url);
+  // app.use(express().sta('public'))
+  // res.setHeader("X-Content-Type-Options", "noSniff");
+  // res.sendFile(PATH_TO_FRONT);
+  res.sendFile(pathToFront + "index.html");
 });
 app.get("/nalog", (req: Request, res: Response) => {
   console.log("ff");
@@ -42,6 +52,12 @@ app.get("/addBonuses", (req: Request, res: Response) => {
 });
 app.post("/addBonuses", (req: Request, res: Response) => {
   addBonuses(req, res);
+});
+app.get("/getHistoryItems", (req: Request, res: Response) => {
+  getHistoryItems(req, res);
+});
+app.post("/addPartner", (req: Request, res: Response) => {
+  addPartner(req, res);
 });
 
 app.listen(port, () => {

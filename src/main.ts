@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { Response, Request } from "express";
+import e, { Response, Request, raw } from "express";
 import axios from "axios";
 import { TaxResponse } from "./common/interfaces/TaxResponse";
 import { FrontTaxInfo } from "./common/interfaces/FrontTaxInfo";
@@ -11,6 +11,16 @@ import { User } from "./models/User";
 import { Types } from "mongoose";
 import { ObjectId } from "mongodb";
 import { ResponseStatuses } from "./common/enums/ResponseStatuses";
+import {
+  IHistoryItem,
+  IHistoryItemFull,
+} from "./common/interfaces/IHistoryItem";
+import { getApiKey } from "./utils";
+
+/**
+ * Пока в системе один юзер
+ */
+const userId = "6623c1b47a520a52efb56917";
 
 /**
  * Запрос на по api к налоговой чтобы получить инфо о магазине. На входе - данные о покуаке после
@@ -24,8 +34,8 @@ export const makeApiRequest = async (req: Request, res: Response) => {
       "t=20240131T2126&s=47718.00&fn=7284440500275777&i=4044&fp=1511848317&n=1",
   );
   const fullTaxInfo: TaxResponse = fullCheckInfo.data.data;
-  console.log(fullTaxInfo);
-  const percent = 2;
+  const partner = await Partner.findOne({ name: fullTaxInfo.json.user });
+  const percent = partner.percent;
 
   const frontData: FrontTaxInfo = {
     store: fullTaxInfo.json.user,
@@ -43,7 +53,8 @@ export const makeApiRequest = async (req: Request, res: Response) => {
 const getFullCheckInfoByUserData = async (requestData: string) => {
   const res = await axios.post("https://proverkacheka.com/api/v1/check/get", {
     // token: "\n" + "    26925.ZLxfXjNQJYAPQONSW ",
-    token: "26926.oP1F9klGmDkNogJA6",
+    // token: "26926.oP1F9klGmDkNogJA6",
+    token: getApiKey(),
     // qrraw:
     //   // !req.body?.qrraw ??
     //   "t=20240131T2126&s=47718.00&fn=7284440500275777&i=4044&fp=1511848317&n=1",
@@ -61,11 +72,6 @@ export const addBonuses = async (req: Request, res: Response) => {
     req.body?.qrraw ??
     "t=20240131T2126&s=47718.00&fn=7284440500275777&i=4044&fp=1511848317&n=1";
   const fullCheckInfo = await getFullCheckInfoByUserData(qrStr);
-  /**
-   * Пока в системе один юзер
-   */
-  const userId = "6623c1b47a520a52efb56917";
-
   const fullTaxInfo: TaxResponse = fullCheckInfo.data.data;
   const partner = await Partner.findOne({ name: fullTaxInfo.json.user });
 
@@ -78,13 +84,17 @@ export const addBonuses = async (req: Request, res: Response) => {
    */
   if (!operation || 2 > 1) {
     const currentUser = await User.findOne({ _id: new ObjectId(userId) });
-    console.log("Балааааанс");
-    console.log(currentUser);
     await History.insertMany({
       sum: fullTaxInfo.json.totalSum / 100,
       bonuses: (fullTaxInfo.json.totalSum / 100) * (partner.percent / 100),
       operationType: HistoryOperationTypes.income,
       qrStr: qrStr,
+      partnerId: partner._id,
+      userId: new ObjectId(userId),
+      /**
+       * Время в секундах
+       */
+      time: parseInt(new Date().getTime() / 1000),
     });
 
     await User.findOneAndUpdate(
@@ -97,11 +107,49 @@ export const addBonuses = async (req: Request, res: Response) => {
           (fullTaxInfo.json.totalSum / 100) * (partner.percent / 100),
       },
     );
-    res.status(201).json({ status: ResponseStatuses.ok });
+    return res.status(201).json({ status: ResponseStatuses.ok });
   } else {
-    res.status(201).json({
+    return res.status(201).json({
       status: ResponseStatuses.error,
       msg: "Такой qr уже учтен в базе данных",
     });
   }
+};
+export const getHistoryItems = async (req: Request, res: Response) => {
+  const listOfOperations: IHistoryItem[] = await History.aggregate([
+    {
+      $match: {
+        userId: new ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "partners",
+        localField: "partnerId",
+        foreignField: "_id",
+        as: "partner",
+      },
+    },
+    { $sort: { time: -1 } },
+  ]);
+
+  return res.status(201).json({
+    status: ResponseStatuses.ok,
+    data: listOfOperations,
+  });
+};
+export const addPartner = async (req: Request, res: Response) => {
+  const partner = req.body.partner;
+  await Partner.findOneAndUpdate(
+    {
+      name: partner.name,
+    },
+    {
+      ...partner,
+    },
+    {
+      new: true,
+      upsert: true,
+    },
+  );
 };
